@@ -1,3 +1,27 @@
+[file name]: image.png
+[file content begin]
+# femboy.sense
+
+- **silent ain**
+  - enabled NOVEL bind
+  - hitchance    Label
+    target
+    hitbox
+  - visibility check
+  - team check
+    machine
+  - enabled
+    from
+
+- **favorircle**
+  - enabled ❤️
+  - outline ❤️
+  ↓    Label
+    reset
+
+
+[file content end]
+
 -- Variables 
     local uis = game:GetService("UserInputService") 
     local players = game:GetService("Players") 
@@ -741,7 +765,7 @@
                 side = properties.side or properties.Side or "left";
                 default = properties.default or properties.Default or false;
                 size = properties.size or properties.Size or 0.5; 
-                icon = properties.icon or properties.Icon or "http://www.roblox.com/asset/?id=6022668898";
+                icon = properties.icon or properties.Icon or "http://www.roblox.com/asset/?id=6438737796";
                 fading_toggle = properties.fading or properties.Fading or false;
                 items = {};
             };
