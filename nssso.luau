@@ -586,7 +586,7 @@
             end
             
             -- Периодически добавляем новые снежинки
-            if random() < 0.3 then  -- 30% шанс добавить снежинку каждый кадр
+            if random() < 0.12 then  -- 30% шанс добавить снежинку каждый кадр
                 library:create_snowflake(library.menu_background_snow)
             end
         end
@@ -608,7 +608,7 @@
                 library.menu_background_snow.Visible = true
                 
                 -- Создаем начальные снежинки в случайных местах
-                for i = 1, 50 do
+                for i = 1, 20 do
                     library:create_snowflake(library.menu_background_snow)
                 end
                 
