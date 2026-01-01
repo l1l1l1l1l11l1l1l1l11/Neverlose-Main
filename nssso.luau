@@ -79,10 +79,10 @@ getgenv().library = {
     menu_background_snow = nil,
     menu_open = false,
     snow_settings = {
-        max_snowflakes = 8,  -- Уменьшено количество снежинок
-        spawn_chance = 0.04,   -- Уменьшена вероятность спавна
-        speed_min = 6,         -- Минимальная скорость падения
-        speed_max = 12,        -- Максимальная скорость падения
+        max_snowflakes = 15,  -- Немного увеличил для лучшего эффекта
+        spawn_chance = 0.08,   -- Шанс появления новой снежинки
+        speed_min = 8,         -- Минимальная скорость падения
+        speed_max = 18,        -- Максимальная скорость падения
     }
 }
 
@@ -496,28 +496,28 @@ end
 function library:create_snowflake(parent)
     local settings = library.snow_settings
     
-    -- Случайный размер снежинки (уменьшенный диапазон)
-    local sizes = {6, 8, 10, 12}
+    -- Случайный размер снежинки
+    local sizes = {6, 8, 10, 12, 14}
     local size = sizes[random(1, #sizes)]
     
     -- Начальная прозрачность
-    local start_transparency = random(40, 80) / 100
+    local start_transparency = random(30, 70) / 100
     
-    -- Начальная позиция (только сверху экрана)
-    local start_x = random(-20, camera.ViewportSize.X + 20)
-    local start_y = random(-80, -40)
+    -- Начальная позиция (по всей ширине экрана, включая за пределами)
+    local start_x = random(-50, camera.ViewportSize.X + 50)
+    local start_y = random(-100, -20)  -- Увеличил диапазон, чтобы снежинки появлялись выше
     
     -- Скорость падения
     local fall_speed = random(settings.speed_min, settings.speed_max) / 10
     
-    -- Случайная скорость вращения (медленнее)
-    local rotation_speed = random(2, 6) / 10
+    -- Случайная скорость вращения
+    local rotation_speed = random(-8, 8) / 10  -- Отрицательные значения для вращения в другую сторону
     
-    -- Амплитуда покачивания (меньше)
-    local wave_amplitude = random(2, 6) / 10
-    local wave_frequency = random(2, 6) / 10
+    -- Амплитуда покачивания
+    local wave_amplitude = random(5, 15) / 10
+    local wave_frequency = random(3, 8) / 10
     
-    -- Создаем снежинку с прозрачностью по умолчанию
+    -- Создаем снежинку
     local snowflake = library:create("ImageLabel", {
         Parent = parent,
         BackgroundTransparency = 1,
@@ -534,7 +534,7 @@ function library:create_snowflake(parent)
     -- Плавное появление
     library:tween(snowflake, {
         ImageTransparency = start_transparency
-    }, Enum.EasingStyle.Quad, 0.5)
+    }, Enum.EasingStyle.Quad, 0.3)
 
     local snowflake_data = {
         instance = snowflake,
@@ -545,7 +545,9 @@ function library:create_snowflake(parent)
         wave_frequency = wave_frequency,
         wave_offset = random() * 100,
         creation_time = tick(),
-        base_transparency = start_transparency
+        base_transparency = start_transparency,
+        start_x = start_x,
+        start_y = start_y
     }
     
     insert(library.snow_particles, snowflake_data)
@@ -554,21 +556,10 @@ end
 
 -- Функция для обновления снежинок
 function library:update_snow()
-    if not library.snow_enabled then return end
+    if not library.snow_enabled or not library.menu_background_snow then return end
     
     local current_time = tick()
     local settings = library.snow_settings
-    
-    -- Удаляем старые снежинки если их слишком много
-    if #library.snow_particles > settings.max_snowflakes then
-        for i = #library.snow_particles, settings.max_snowflakes + 1, -1 do
-            local snowflake_data = library.snow_particles[i]
-            if snowflake_data and snowflake_data.instance then
-                snowflake_data.instance:Destroy()
-            end
-            remove(library.snow_particles, i)
-        end
-    end
     
     -- Обновляем существующие снежинки
     for i = #library.snow_particles, 1, -1 do
@@ -579,37 +570,49 @@ function library:update_snow()
             local current_pos = snowflake.Position
             local time_since_creation = current_time - snowflake_data.creation_time
             
-            -- Падение вниз
+            -- ОБНОВЛЕНО: Двигаем снежинку вниз (это ключевое исправление!)
             local new_y = current_pos.Y.Offset + snowflake_data.fall_speed
             
-            -- Покачивание
+            -- Покачивание из стороны в сторону
             local wave_offset = sin(time_since_creation * snowflake_data.wave_frequency + snowflake_data.wave_offset) * snowflake_data.wave_amplitude
-            local new_x = current_pos.X.Offset + wave_offset
+            local new_x = snowflake_data.start_x + wave_offset
             
             -- Вращение
             local rotation = snowflake.Rotation + snowflake_data.rotation_speed
             if rotation > 360 then rotation = rotation - 360 end
+            if rotation < 0 then rotation = rotation + 360 end
             
             -- Плавное изменение прозрачности
             local transparency = snowflake_data.base_transparency + (sin(time_since_creation * 2 + snowflake_data.wave_offset) + 1) / 2 * 0.2
-            transparency = clamp(transparency, 0.4, 0.9)
+            transparency = clamp(transparency, 0.3, 0.8)
             
+            -- Обновляем позицию и свойства снежинки
             snowflake.Position = dim2(0, new_x, 0, new_y)
             snowflake.Rotation = rotation
             snowflake.ImageTransparency = transparency
             
-            -- Если снежинка упала за пределы экрана, удаляем её
-            if new_y > camera.ViewportSize.Y + 30 then
-                -- Плавное исчезновение перед удалением
-                local tween = library:tween(snowflake, {
-                    ImageTransparency = 1,
-                    Size = dim2(0, snowflake_data.size * 0.3, 0, snowflake_data.size * 0.3)
-                }, Enum.EasingStyle.Quad, 0.3)
+            -- Если снежинка упала за пределы экрана
+            if new_y > camera.ViewportSize.Y + 50 then
+                -- Перемещаем снежинку наверх с новыми параметрами
+                snowflake_data.creation_time = current_time
+                snowflake_data.start_y = random(-100, -20)
+                snowflake_data.start_x = random(-50, camera.ViewportSize.X + 50)
+                snowflake_data.wave_offset = random() * 100
+                snowflake_data.base_transparency = random(30, 70) / 100
+                snowflake_data.fall_speed = random(settings.speed_min, settings.speed_max) / 10
                 
-                library:connection(tween.Completed, function()
-                    snowflake:Destroy()
-                    remove(library.snow_particles, i)
-                end)
+                -- Плавное перемещение наверх
+                snowflake.ImageTransparency = 1
+                snowflake.Position = dim2(0, snowflake_data.start_x, 0, snowflake_data.start_y)
+                
+                library:tween(snowflake, {
+                    ImageTransparency = snowflake_data.base_transparency
+                }, Enum.EasingStyle.Quad, 0.5)
+            end
+            
+            -- Если снежинка вышла слишком далеко в стороны
+            if new_x < -100 or new_x > camera.ViewportSize.X + 100 then
+                snowflake_data.start_x = clamp(new_x, -50, camera.ViewportSize.X + 50)
             end
         else
             remove(library.snow_particles, i)
@@ -644,8 +647,8 @@ function library:toggle_snow_background(enabled)
             BackgroundTransparency = 0.7
         }, Enum.EasingStyle.Quad, 0.4)
         
-        -- Создаем несколько начальных снежинок
-        for i = 1, math.min(3, library.snow_settings.max_snowflakes) do
+        -- Создаем начальные снежинки
+        for i = 1, math.min(8, library.snow_settings.max_snowflakes) do
             library:create_snowflake(library.menu_background_snow)
         end
         
